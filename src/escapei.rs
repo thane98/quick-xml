@@ -220,7 +220,12 @@ where
                 let pat = &raw[start + 1..end];
                 if let Some(entity) = pat.strip_prefix('#') {
                     let codepoint = parse_number(entity, start..end)?;
-                    unescaped.push_str(codepoint.encode_utf8(&mut [0u8; 4]));
+                    let mut buffer = [0u8; 4];
+                    unescaped.push_str(if codepoint == '\n' {
+                        "&#xA;"
+                    } else {
+                        codepoint.encode_utf8(&mut buffer)
+                    });
                 } else if let Some(value) = named_entity(pat) {
                     unescaped.push_str(value);
                 } else if let Some(value) = resolve_entity(pat) {
@@ -1773,6 +1778,11 @@ fn parse_decimal(bytes: &str) -> Result<u32, EscapeError> {
         } as u32;
     }
     Ok(code)
+}
+
+#[test]
+fn test_unescape_newline() {
+    assert_eq!(unescape("&#xA;").unwrap(), "&#xA;");
 }
 
 #[test]

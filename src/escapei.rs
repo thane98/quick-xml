@@ -134,7 +134,7 @@ pub(crate) fn _escape<F: Fn(u8) -> bool>(raw: &str, escape_chars: F) -> Cow<str>
     let mut escaped = None;
     let mut iter = bytes.iter();
     let mut pos = 0;
-    while let Some(i) = iter.position(|&b| escape_chars(b)) {
+    while let Some(i) = iter.position(|&b| escape_chars(b) || b == b'\n') {
         if escaped.is_none() {
             escaped = Some(Vec::with_capacity(raw.len()));
         }
@@ -152,7 +152,7 @@ pub(crate) fn _escape<F: Fn(u8) -> bool>(raw: &str, escape_chars: F) -> Cow<str>
             // in elements of xs:lists, because those characters works as
             // delimiters of list elements
             b'\t' => escaped.extend_from_slice(b"&#9;"),
-            b'\n' => escaped.extend_from_slice(b"&#10;"),
+            b'\n' => escaped.extend_from_slice(b"&#xA;"),
             b'\r' => escaped.extend_from_slice(b"&#13;"),
             b' ' => escaped.extend_from_slice(b"&#32;"),
             _ => unreachable!(
@@ -220,12 +220,7 @@ where
                 let pat = &raw[start + 1..end];
                 if let Some(entity) = pat.strip_prefix('#') {
                     let codepoint = parse_number(entity, start..end)?;
-                    let mut buffer = [0u8; 4];
-                    unescaped.push_str(if codepoint == '\n' {
-                        "&#xA;"
-                    } else {
-                        codepoint.encode_utf8(&mut buffer)
-                    });
+                    unescaped.push_str(codepoint.encode_utf8(&mut [0u8; 4]));
                 } else if let Some(value) = named_entity(pat) {
                     unescaped.push_str(value);
                 } else if let Some(value) = resolve_entity(pat) {
@@ -1781,11 +1776,6 @@ fn parse_decimal(bytes: &str) -> Result<u32, EscapeError> {
 }
 
 #[test]
-fn test_unescape_newline() {
-    assert_eq!(unescape("&#xA;").unwrap(), "&#xA;");
-}
-
-#[test]
 fn test_unescape() {
     let unchanged = unescape("test").unwrap();
     // assert_eq does not check that Cow is borrowed, but we explicitly use Cow
@@ -1837,6 +1827,7 @@ fn test_escape() {
     assert_eq!(escape("<test>"), "&lt;test&gt;");
     assert_eq!(escape("\"a\"bc"), "&quot;a&quot;bc");
     assert_eq!(escape("\"a\"b&c"), "&quot;a&quot;b&amp;c");
+    assert_eq!(escape("ルナティックLv5\n追加スキル"), "ルナティックLv5&#xA;追加スキル");
     assert_eq!(
         escape("prefix_\"a\"b&<>c"),
         "prefix_&quot;a&quot;b&amp;&lt;&gt;c"
@@ -1856,6 +1847,7 @@ fn test_partial_escape() {
     assert_eq!(partial_escape("<test>"), "&lt;test&gt;");
     assert_eq!(partial_escape("\"a\"bc"), "\"a\"bc");
     assert_eq!(partial_escape("\"a\"b&c"), "\"a\"b&amp;c");
+    assert_eq!(partial_escape("ルナティックLv5\n追加スキル"), "ルナティックLv5&#xA;追加スキル");
     assert_eq!(
         partial_escape("prefix_\"a\"b&<>c"),
         "prefix_\"a\"b&amp;&lt;&gt;c"
@@ -1869,6 +1861,7 @@ fn test_minimal_escape() {
     assert_eq!(minimal_escape("<test>"), "&lt;test>");
     assert_eq!(minimal_escape("\"a\"bc"), "\"a\"bc");
     assert_eq!(minimal_escape("\"a\"b&c"), "\"a\"b&amp;c");
+    assert_eq!(minimal_escape("ルナティックLv5\n追加スキル"), "ルナティックLv5&#xA;追加スキル");
     assert_eq!(
         minimal_escape("prefix_\"a\"b&<>c"),
         "prefix_\"a\"b&amp;&lt;>c"

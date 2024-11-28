@@ -206,7 +206,7 @@ impl<W: Write> Writer<W> {
                 }
                 self.write_wrapped(b"</", e, b">")
             }
-            Event::Empty(ref e) => self.write_wrapped(b"<", e, b"/>"),
+            Event::Empty(ref e) => self.write_wrapped(b"<", e, b" />"),
             Event::Text(ref e) => {
                 next_should_line_break = false;
                 self.write(e)
@@ -494,7 +494,7 @@ mod indentation {
 
         assert_eq!(
             std::str::from_utf8(&buffer).unwrap(),
-            r#"<self-closed attr1="value1" attr2="value2"/>"#
+            r#"<self-closed attr1="value1" attr2="value2" />"#
         );
     }
 
@@ -543,7 +543,7 @@ mod indentation {
         assert_eq!(
             std::str::from_utf8(&buffer).unwrap(),
             r#"<paired attr1="value1" attr2="value2">
-    <inner/>
+    <inner />
 </paired>"#
         );
     }
@@ -600,7 +600,7 @@ mod indentation {
 
         assert_eq!(
             std::str::from_utf8(&buffer).unwrap(),
-            r#"<paired attr1="value1" attr2="value2">text<inner/>
+            r#"<paired attr1="value1" attr2="value2">text<inner />
 </paired>"#
         );
     }
@@ -635,7 +635,7 @@ mod indentation {
             std::str::from_utf8(&buffer).unwrap(),
             r#"<paired attr1="value1" attr2="value2">
     <paired attr1="value1" attr2="value2">
-        <inner/>
+        <inner />
     </paired>
 </paired>"#
         );
@@ -720,7 +720,7 @@ mod indentation {
 
         assert_eq!(
             std::str::from_utf8(&buffer).unwrap(),
-            r#"<empty attr1="value1" attr2="value2"/>"#
+            r#"<empty attr1="value1" attr2="value2" />"#
         );
     }
 
@@ -776,7 +776,7 @@ mod indentation {
     <fruit quantity="1">orange</fruit>
     <fruit quantity="2">banana</fruit>
     <inner>
-        <empty/>
+        <empty />
     </inner>
 </outer>"#
         );
